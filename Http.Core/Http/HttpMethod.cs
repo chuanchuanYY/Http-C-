@@ -1,4 +1,6 @@
-namespace Http.Core.http;
+using Http.Core.Common;
+
+namespace Http.Core.Http;
 
 
 public enum HttpMethod 
@@ -6,10 +8,21 @@ public enum HttpMethod
     GET,
     POST,
 }
-public static class HttpMethodsExtension
+public sealed class HttpMethodConverter
 {
-    public static HttpMethod IntoHttpMethod(this string msg)
+    private HttpMethodConverter()
     {
+
+    }
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="msg"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    public  static HttpMethod GetMethod(string msg)
+    {
+        ArgumentNullException.ThrowIfNull(msg);
         switch (msg)
         {
             case "POST": 
@@ -17,7 +30,7 @@ public static class HttpMethodsExtension
             case "GET": 
                  return HttpMethod.GET;
             default : 
-            throw new ArgumentException("unknown http Methods" + msg);
+            throw new ArgumentException(ErrorMessages.UNKNOWN_HTTP_METHOD,nameof(msg));
         }
     }
 }

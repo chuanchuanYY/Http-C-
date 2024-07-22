@@ -1,6 +1,8 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Http.Core.Common;
+using Http.Core.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Http.Core;
@@ -14,6 +16,7 @@ public class Route
 {
     private List<Assembly> _loadAssembly = new List<Assembly>();
     private Dictionary<string,RouteMethod> _route = new Dictionary<string, RouteMethod>(); 
+  
     private  ServiceProvider _serviceProvider ;
    
     public Route()
@@ -29,7 +32,7 @@ public class Route
 
     public Dictionary<string,RouteMethod> GetRoutes()
     {
-        return _route;
+        return new Dictionary<string, RouteMethod>(_route);
     }
     
     private void Load()
@@ -88,26 +91,59 @@ public class Route
     /// 调用方法，通过指定的路由地址
     /// </summary>
     /// 
-    public  void InvokeMethodByRoute(string uri)
+    public  void InvokeMethodByRoute(Request request)
     {
-        ArgumentNullException.ThrowIfNullOrEmpty(uri);
+        ArgumentNullException.ThrowIfNullOrEmpty(request.Path);
 
-        if(!_route.ContainsKey(uri))
+        if(!_route.ContainsKey(request.Path))
         {
-            throw new ArgumentException("route没有指定的Uri ", "uri");
+            throw new ArgumentException("route没有指定的path ");
         }
 
-        RouteMethod routeMethod = _route[uri];
-
+        RouteMethod routeMethod = _route[request.Path];
         object? instance = _serviceProvider.GetRequiredService(routeMethod.ClassType);
         if(instance == null)
         {
             throw new Exception("创建Type 实例失败");
         }
 
-        // 待做。。。
-        // 获取 查询字符串参数：localhost:8080/Some?id=1&value=2
-        routeMethod.Method.Invoke(instance, new object[] {  });
+        // 如果是 HttpController 的子类
+        if(routeMethod.ClassType.IsAssignableTo(typeof(HttpController)))
+        {
+           var _controller = (HttpController)instance;
+           _controller.Context = new HttpContext
+           {
+             request = request,
+           };
+        }
+
+
+        if(request.QueryParames.Count == 0 )
+        {
+            routeMethod.Method.Invoke(instance, new object[] {  });
+        }
+        else 
+        {
+            // 获取方法的参数信息
+            ParameterInfo[] parameterInfo = routeMethod.Method.GetParameters();
+            object[] parames = new object[parameterInfo.Length];
+           
+           try
+           {
+                if(parameterInfo.Length == request.QueryParames.Count)
+                {
+                    for(int i=0; i<parameterInfo.Length;i++)
+                    {
+                        parames[i] =  Convert.ChangeType(request.QueryParames[parameterInfo[i].Name!],parameterInfo[i].ParameterType);
+                    }
+                    routeMethod.Method.Invoke(instance, parames);
+                }
+           }
+           catch
+           {
+             throw;
+           }
+        }
     }
 
 }

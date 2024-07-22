@@ -2,7 +2,7 @@
 
 using System.Net.Sockets;
 using System.Text;
-using Http.Core.http;
+using Http.Core.Http;
 
 namespace Http.Core;
 
@@ -25,21 +25,30 @@ public class ConnectionHandle
         // 将调用的结果返回
         // and then respons data;
     }
+   
     private void ReadData()
     {
-        // read a message from the stream 
-        if(_stream.CanRead)
+        try
         {
-            using StreamReader reader = new StreamReader(_stream);
-            List<string> data = new List<string>();
-            string? line ;
-            while((line=reader.ReadLine())!=null)
+            // read a message from the stream 
+            if(_stream.CanRead)
             {
-                data.Add(line);
+                using StreamReader reader = new StreamReader(_stream);
+                List<string> data = new List<string>();
+                string? line ;
+                while((line=reader.ReadLine())!=null)
+                {
+                    data.Add(line);
+                }
+                // parse the http massage 
+                _request = Request.Parse(data);
             }
-            // parse the http massage 
-           _request = Request.Parse(data);
+
         }
+        catch
+        {
+            throw;
+        }            
     }
 
     private async Task ReadDataAsync()
